@@ -1,5 +1,5 @@
-#include "arquivos.h/bibliotecas.h"
-#include "arquivos.h/musica.h"
+#include "../arquivos.h/bibliotecas.h"
+#include "../arquivos.h/musica.h"
 
 int main() {
     FILE *file = fopen("musicas.txt", "r");

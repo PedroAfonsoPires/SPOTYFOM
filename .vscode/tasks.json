@@ -9,6 +9,7 @@
                 "-Wall",
                 "-Wextra",
                 "-g3",
+                "-Iarquivos.h",
                 "arquivos.c/main.c",
                 "arquivos.c/musica.c",
                 "-o",

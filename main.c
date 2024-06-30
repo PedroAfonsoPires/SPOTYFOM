@@ -17,6 +17,19 @@ typedef struct no {
     struct no *prox;
 } No;
 
+typedef struct desc{
+    int tam;
+    No *inicio;
+}Desc;
+
+Desc *CriaDesc(){
+    Desc *desc = (Desc*)malloc(sizeof(Desc));
+    desc->inicio = NULL;
+    desc->tam = 0;
+
+    return desc;
+}
+
 // Função para criar um novo nó
 No* criaNo(Musica m) {
     No *novo = (No*) malloc(sizeof(No));
@@ -28,22 +41,24 @@ No* criaNo(Musica m) {
 }
 
 // Função para inserir um nó no final da lista
-void insereNo(No **lista, Musica m) {
+void insereNo(Musica m, Desc *desc) {
     No *novo = criaNo(m);
-    if (*lista == NULL) {
-        *lista = novo;
+    if (desc->inicio == NULL) {
+        desc->inicio = novo;
+        desc->tam++;
     } else {
-        No *atual = *lista;
+        No *atual = desc->inicio;
         while (atual->prox != NULL) {
             atual = atual->prox;
         }
         atual->prox = novo;
+        desc->tam++;
     }
 }
 
 // Função para ler o arquivo e carregar as músicas
-void carregaMusicas(No **lista) {
-    FILE *file = fopen("musicas.txt", "r");
+void carregaMusicas(Desc *desc) {
+    FILE *file = fopen("musicas copy.txt", "r");
     if (!file) {
         perror("Não foi possível abrir o arquivo");
         return;
@@ -54,9 +69,9 @@ void carregaMusicas(No **lista) {
 
     Musica m;
     for (int i = 0; i < quantidadeMusicas; i++) {
-        if (fscanf(file, "%255[^;];%255[^;];%255[^;];%d;%d\n",
-               m.titulo, m.artista, m.letra, &m.codigo, &m.execucoes) == 5) {
-            insereNo(lista, m);
+        if (fscanf(file, "%[^;];%[^;];%[^;];%d;\n",
+               m.artista, m.titulo, m.letra, &m.codigo) == 4) {
+            insereNo(m, desc);
         }
     }
 
@@ -64,29 +79,29 @@ void carregaMusicas(No **lista) {
 }
 
 // Função para imprimir as músicas
-void imprimeMusicas(No *lista) {
-    No *atual = lista;
-    int contador = 0;
+void imprimeMusicas(Desc *lista) {
+    No *atual = lista->inicio;
 
-    while (atual != NULL && contador < 5000) {
+    while (atual != NULL) {
         printf("Título: %s\n", atual->dado.titulo);
         printf("Artista: %s\n", atual->dado.artista);
         printf("Letra: %s\n", atual->dado.letra);
         printf("Código: %d\n", atual->dado.codigo);
-        printf("Execuções: %d\n", atual->dado.execucoes);
         printf("------------------------------\n");
         atual = atual->prox;
-        contador++;
+        lista->tam++;
     }
 }
 
 int main() {
-    No *listaMusicas = NULL;
-    carregaMusicas(&listaMusicas);
-    imprimeMusicas(listaMusicas);
+    Desc *desc = NULL;
+    desc=CriaDesc();
+
+    carregaMusicas(desc);
+    imprimeMusicas(desc);
 
     // Liberação de memória
-    No *atual = listaMusicas;
+    No *atual = desc->inicio;
     while (atual != NULL) {
         No *temp = atual;
         atual = atual->prox;

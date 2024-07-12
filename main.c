@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_CHAR 256
+#define MAX_CHAR 1024
 
 typedef struct musica {
     char titulo[MAX_CHAR];
@@ -17,16 +17,15 @@ typedef struct no {
     struct no *prox;
 } No;
 
-typedef struct desc{
+typedef struct desc {
     int tam;
     No *inicio;
-}Desc;
+} Desc;
 
-Desc *CriaDesc(){
+Desc *CriaDesc() {
     Desc *desc = (Desc*)malloc(sizeof(Desc));
     desc->inicio = NULL;
     desc->tam = 0;
-
     return desc;
 }
 
@@ -45,32 +44,29 @@ void insereNo(Musica m, Desc *desc) {
     No *novo = criaNo(m);
     if (desc->inicio == NULL) {
         desc->inicio = novo;
-        desc->tam++;
     } else {
         No *atual = desc->inicio;
         while (atual->prox != NULL) {
             atual = atual->prox;
         }
         atual->prox = novo;
-        desc->tam++;
     }
+    desc->tam++;
 }
 
 // Função para ler o arquivo e carregar as músicas
 void carregaMusicas(Desc *desc) {
-    FILE *file = fopen("musicas copy.txt", "r");
+    FILE *file = fopen("musicas.txt", "r");
     if (!file) {
         perror("Não foi possível abrir o arquivo");
         return;
     }
 
-    int quantidadeMusicas;
-    fscanf(file, "%d\n", &quantidadeMusicas);
-
     Musica m;
-    for (int i = 0; i < quantidadeMusicas; i++) {
-        if (fscanf(file, "%[^;];%[^;];%[^;];%d;\n",
-               m.artista, m.titulo, m.letra, &m.codigo) == 4) {
+    char buffer[MAX_CHAR];
+    while (fgets(buffer, MAX_CHAR, file) != NULL) {
+        if (sscanf(buffer, "%[^;];%d;%[^;];%[^;];%*s",
+                   m.artista, &m.codigo, m.titulo, m.letra) == 4) {
             insereNo(m, desc);
         }
     }
@@ -78,9 +74,10 @@ void carregaMusicas(Desc *desc) {
     fclose(file);
 }
 
-// Função para imprimir as músicas
+// Função para imprimir as músicas paginadas
 void imprimeMusicas(Desc *lista) {
     No *atual = lista->inicio;
+    int count = 0;
 
     while (atual != NULL) {
         printf("Título: %s\n", atual->dado.titulo);
@@ -88,17 +85,104 @@ void imprimeMusicas(Desc *lista) {
         printf("Letra: %s\n", atual->dado.letra);
         printf("Código: %d\n", atual->dado.codigo);
         printf("------------------------------\n");
+
+        count++;
+        if (count % 200 == 0) {
+            if (atual->prox == NULL) {
+                printf("Todas as músicas foram impressas.\n");
+                break;
+            }
+
+            char resposta;
+            printf("Deseja imprimir mais 200 músicas? (s/n): ");
+            scanf(" %c", &resposta);
+            if (resposta != 's' && resposta != 'S') {
+                break;
+            }
+        }
+
         atual = atual->prox;
-        lista->tam++;
+    }
+
+    if (atual == NULL && count % 200 != 0) {
+        printf("Todas as músicas foram impressas.\n");
     }
 }
 
+// Funções placeholder para as opções do menu
+void executaMusicas() {
+    printf("Executar músicas.\n");
+    // Implementar função
+}
+
+void playlist() {
+    printf("Gerenciar playlist.\n");
+    // Implementar função
+}
+
+void busca() {
+    printf("Buscar músicas.\n");
+    // Implementar função
+}
+
+void relatorio() {
+    printf("Gerar relatório.\n");
+    // Implementar função
+}
+
+void backup() {
+    printf("Fazer back-up.\n");
+    // Implementar função
+}
+
+void exibirMenu() {
+    printf("\nMenu:\n");
+    printf("1. Execução\n");
+    printf("2. Playlist\n");
+    printf("3. Busca\n");
+    printf("4. Impressão\n");
+    printf("5. Relatório\n");
+    printf("6. Back-up\n");
+    printf("7. Sair\n");
+    printf("Escolha uma opção: ");
+}
+
 int main() {
-    Desc *desc = NULL;
-    desc=CriaDesc();
+    Desc *desc = CriaDesc();
+    int opcao;
 
     carregaMusicas(desc);
-    imprimeMusicas(desc);
+
+    do {
+        exibirMenu();
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                executaMusicas();
+                break;
+            case 2:
+                playlist();
+                break;
+            case 3:
+                busca();
+                break;
+            case 4:
+                imprimeMusicas(desc);
+                break;
+            case 5:
+                relatorio();
+                break;
+            case 6:
+                backup();
+                break;
+            case 7:
+                printf("Saindo...\n");
+                break;
+            default:
+                printf("Opção inválida! Tente novamente.\n");
+        }
+    } while (opcao != 7);
 
     // Liberação de memória
     No *atual = desc->inicio;
@@ -107,6 +191,7 @@ int main() {
         atual = atual->prox;
         free(temp);
     }
+    free(desc);
 
     return 0;
 }

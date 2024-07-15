@@ -38,7 +38,7 @@ typedef struct pilha {
 Desc *CriaDesc() {
     Desc *desc = (Desc*)malloc(sizeof(Desc));
     desc->inicio = NULL;
-    desc->tam = 1;
+    desc->tam = 0;
     return desc;
 }
 
@@ -46,7 +46,6 @@ No* criaNo(Musica m) {
     No *novo = (No*) malloc(sizeof(No));
     if (novo != NULL) {
         novo->dado = m;
-        novo->dado.execucoes = 0;
         novo->prox = NULL;
     }
     return novo;
@@ -78,6 +77,7 @@ void carregaMusicas(Desc *desc) {
     while (fgets(buffer, MAX_CHAR, file) != NULL) {
         if (sscanf(buffer, "%[^;];%d;%[^;];%[^;];%*s",
                    m.artista, &m.codigo, m.titulo, m.letra) == 4) {
+            m.execucoes = 0; // Inicializa execucoes como 0
             insereNo(m, desc);
         }
     }
@@ -85,38 +85,53 @@ void carregaMusicas(Desc *desc) {
     fclose(file);
 }
 
-void imprimeMusicas(Desc *lista) {
+void imprimeMusica(Musica m) {
+    printf("\nTitulo: %s\n", m.titulo);
+    printf("Artista: %s\n", m.artista);
+    printf("Letra: %s\n", m.letra);
+    printf("Codigo: %d\n", m.codigo);
+    printf("------------------------------\n");
+}
+
+void imprimeBuscaPorTituloOuTodas(Desc *lista, const char *titulo) {
     No *atual = lista->inicio;
     int count = 0;
+    int total = 0;
+    int todasImpressas = 0; // Variável para controlar se todas as músicas foram impressas
 
-    while (atual != NULL) {
-        printf("Titulo: %s\n", atual->dado.titulo);
-        printf("Artista: %s\n", atual->dado.artista);
-        printf("Letra: %s\n", atual->dado.letra);
-        printf("Codigo: %d\n", atual->dado.codigo);
-        printf("Execucoes: %d\n", atual->dado.execucoes);
-        printf("------------------------------\n");
-
-        count++;
-        if (count % 200 == 0) {
-            if (atual->prox == NULL) {
-                printf("Todas as musicas foram impressas.\n");
-                break;
+    if (titulo == NULL || strlen(titulo) == 0) {
+        printf("Imprimindo todas as musicas do acervo:\n");
+        while (atual != NULL) {
+            imprimeMusica(atual->dado);
+            count++;
+            total++;
+            if (count % 200 == 0) {
+                char resposta;
+                printf("Deseja imprimir mais 200 musicas? (s/n): ");
+                scanf(" %c", &resposta);
+                getchar();
+                if (resposta != 's' && resposta != 'S') {
+                    break; // Sai do loop de impressão
+                }
             }
-
-            char resposta;
-            printf("Deseja imprimir mais 200 musicas? (s/n): ");
-            scanf(" %c", &resposta);
-            if (resposta != 's' && resposta != 'S') {
-                break;
-            }
+            atual = atual->prox;
         }
-
-        atual = atual->prox;
+        if (atual == NULL) { // Verifica se todas as músicas foram impressas
+            todasImpressas = 1;
+        }
+    } else {
+        while (atual != NULL) {
+            if (strcmp(atual->dado.titulo, titulo) == 0) {
+                imprimeMusica(atual->dado);
+                return;
+            }
+            atual = atual->prox;
+        }
+        printf("Musica com titulo \"%s\" nao encontrada.\n", titulo);
     }
 
-    if (atual == NULL && count % 200 != 0) {
-        printf("Todas as musicas foram impressas.\n");
+    if (todasImpressas && (titulo == NULL || strlen(titulo) == 0)) {
+        printf("\nTodas as musicas foram impressas.\n");
     }
 }
 
@@ -167,12 +182,8 @@ Pilha* criaPilha() {
 
 void empilha(Pilha *p, Musica m) {
     No *novo = criaNo(m);
-    if (p->topo == NULL) {
-        p->topo = novo;
-    } else {
-        novo->prox = p->topo;
-        p->topo = novo;
-    }
+    novo->prox = p->topo;
+    p->topo = novo;
     p->tam++;
 }
 
@@ -195,7 +206,7 @@ void executaMusicaPorCodigo(Desc *desc, int codigo, int execucoes) {
     while (atual != NULL) {
         if (atual->dado.codigo == codigo) {
             atual->dado.execucoes += execucoes;
-            printf("Musica \"%s\" executada. Total de execucoes: %d\n", atual->dado.titulo, atual->dado.execucoes);
+            printf("Musica \"%s\" executada %d vez(es).\n", atual->dado.titulo, execucoes);
             return;
         }
         atual = atual->prox;
@@ -204,20 +215,21 @@ void executaMusicaPorCodigo(Desc *desc, int codigo, int execucoes) {
 }
 
 void executaPlaylist(Fila *fila, Desc *desc) {
-    printf("Executando playlist...\n");
+    printf("Executando playlist aleatoria...\n");
     while (fila->tam > 0) {
         Musica m = desenfileira(fila);
-        executaMusicaPorCodigo(desc, m.codigo, m.execucoes);  
+        executaMusicaPorCodigo(desc, m.codigo, 1);
     }
 }
 
 void executaPilha(Pilha *pilha, Desc *desc) {
-    printf("Executando playlist...\n");
+    printf("Executando playlist pessoal...\n");
     while (pilha->tam > 0) {
         Musica m = desempilha(pilha);
-        executaMusicaPorCodigo(desc, m.codigo, m.execucoes);
+        executaMusicaPorCodigo(desc, m.codigo, m.execucoes); 
     }
 }
+
 
 void buscaPorCodigo(Desc *lista, int codigo) {
     No *atual = lista->inicio;
@@ -227,7 +239,6 @@ void buscaPorCodigo(Desc *lista, int codigo) {
             printf("Artista: %s\n", atual->dado.artista);
             printf("Letra: %s\n", atual->dado.letra);
             printf("Codigo: %d\n", atual->dado.codigo);
-            printf("Execucoes: %d\n", atual->dado.execucoes);
             printf("------------------------------\n");
             return;
         }
@@ -244,7 +255,6 @@ void buscaPorTitulo(Desc *lista, const char *titulo) {
             printf("Artista: %s\n", atual->dado.artista);
             printf("Letra: %s\n", atual->dado.letra);
             printf("Codigo: %d\n", atual->dado.codigo);
-            printf("Execucoes: %d\n", atual->dado.execucoes);
             printf("------------------------------\n");
             return;
         }
@@ -261,23 +271,20 @@ void buscaPorArtista(Desc *lista, const char *artista) {
             printf("Artista: %s\n", atual->dado.artista);
             printf("Letra: %s\n", atual->dado.letra);
             printf("Codigo: %d\n", atual->dado.codigo);
-            printf("Execucoes: %d\n", atual->dado.execucoes);
             printf("------------------------------\n");
         }
         atual = atual->prox;
     }
 }
 
-void busca(Desc *desc) {
-    int opcao;
-    int codigo;
-    char titulo[MAX_CHAR];
-    char artista[MAX_CHAR];
+void busca(Desc *lista) {
+    int opcao, codigo;
+    char titulo[MAX_CHAR], artista[MAX_CHAR];
 
-    printf("\nBuscar Musica:\n");
-    printf("1. Por codigo\n");
-    printf("2. Por titulo\n");
-    printf("3. Por artista\n");
+    printf("Busca:\n");
+    printf("1. Por Codigo\n");
+    printf("2. Por Titulo\n");
+    printf("3. Por Artista\n");
     printf("Escolha uma opcao: ");
     scanf("%d", &opcao);
     getchar();
@@ -286,112 +293,85 @@ void busca(Desc *desc) {
         case 1:
             printf("Digite o codigo da musica: ");
             scanf("%d", &codigo);
-            getchar();
-            buscaPorCodigo(desc, codigo);
+            buscaPorCodigo(lista, codigo);
             break;
         case 2:
             printf("Digite o titulo da musica: ");
             fgets(titulo, MAX_CHAR, stdin);
             titulo[strcspn(titulo, "\n")] = '\0';
-            buscaPorTitulo(desc, titulo);
+            buscaPorTitulo(lista, titulo);
             break;
         case 3:
-            printf("Digite o artista da musica: ");
+            printf("Digite o nome do artista: ");
             fgets(artista, MAX_CHAR, stdin);
             artista[strcspn(artista, "\n")] = '\0';
-            buscaPorArtista(desc, artista);
+            buscaPorArtista(lista, artista);
             break;
         default:
             printf("Opcao invalida! Tente novamente.\n");
     }
 }
 
-void filaAleatoria(Desc *desc, Fila *fila, int n) {
-    No *atual;
-    int contador = 0;
+void geraRelatorioPlaylist(Fila *fila, Pilha *pilha, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        perror("Nao foi possivel criar o arquivo");
+        return;
+    }
 
-    srand(time(NULL));
-
-    while (contador < n) {
-        int aleatorio = rand() % desc->tam;
-        atual = desc->inicio;
-
-        for (int i = 0; i < aleatorio; i++) {
+    if (fila != NULL) {
+        fprintf(file, "Relatorio da Playlist Aleatoria:\n\n");
+        No *atual = fila->inicio;
+        while (atual != NULL) {
+            fprintf(file, "Titulo: %s\n", atual->dado.titulo);
+            fprintf(file, "Artista: %s\n", atual->dado.artista);
+            fprintf(file, "Letra: %s\n", atual->dado.letra);
+            fprintf(file, "Codigo: %d\n", atual->dado.codigo);
+            fprintf(file, "Execucoes: %d\n", atual->dado.execucoes);
+            fprintf(file, "------------------------------\n");
             atual = atual->prox;
         }
-        Musica m = atual->dado;
-        m.execucoes = 1;
-        enfileira(fila, m);
-        contador++;
     }
 
-    printf("Playlist aleatoria criada.\n");
-}
-
-void playlistPessoal(Desc *desc, Pilha *pilha, int n) {
-    char titulo[MAX_CHAR];
-    int contador = 0;
-
-    while (contador < n) {
-        printf("Digite o titulo da musica para adicionar a playlist (ou 'sair' para finalizar): ");
-        fgets(titulo, MAX_CHAR, stdin);
-        titulo[strcspn(titulo, "\n")] = '\0';
-
-        if (strcmp(titulo, "sair") == 0) {
-            break;
-        } else {
-            No *atual = desc->inicio;
-            while (atual != NULL) {
-                if (strcmp(atual->dado.titulo, titulo) == 0) {
-                    printf("Digite o numero de execucoes para a musica \"%s\": ", titulo);
-                    int execucoes;
-                    scanf("%d", &execucoes);
-                    getchar();
-                    Musica m = atual->dado;
-                    m.execucoes = execucoes;
-                    empilha(pilha, m);
-                    printf("Musica \"%s\" adicionada a playlist.\n", titulo);
-                    contador++;
-                    break;
-                }
-                atual = atual->prox;
-            }
-            if (atual == NULL) {
-                printf("Musica \"%s\" nao encontrada.\n", titulo);
-            }
+    if (pilha != NULL) {
+        fprintf(file, "Relatorio da Playlist Pessoal:\n\n");
+        No *atual = pilha->topo;
+        while (atual != NULL) {
+            fprintf(file, "Titulo: %s\n", atual->dado.titulo);
+            fprintf(file, "Artista: %s\n", atual->dado.artista);
+            fprintf(file, "Letra: %s\n", atual->dado.letra);
+            fprintf(file, "Codigo: %d\n", atual->dado.codigo);
+            fprintf(file, "Execucoes: %d\n", atual->dado.execucoes);
+            fprintf(file, "------------------------------\n");
+            atual = atual->prox;
         }
     }
+
+    fclose(file);
+    printf("Relatorio gerado com sucesso em %s.\n", filename);
 }
 
-void gerenciarPlaylist(Desc *desc, Fila **fila, Pilha **pilha) {
-    int opcao;
-    int n;
-
-    printf("\nGerenciar Playlist:\n");
-    printf("1. Criar playlist aleatoria\n");
-    printf("2. Criar playlist pessoal\n");
-    printf("Escolha uma opcao: ");
-    scanf("%d", &opcao);
-    getchar();
-
-    switch (opcao) {
-        case 1:
-            printf("Digite o numero de musicas para a playlist aleatoria: ");
-            scanf("%d", &n);
-            getchar();
-            *fila = criaFila();
-            filaAleatoria(desc, *fila, n);
-            break;
-        case 2:
-            printf("Digite o numero de musicas para a playlist pessoal: ");
-            scanf("%d", &n);
-            getchar();
-            *pilha = criaPilha();
-            playlistPessoal(desc, *pilha, n);
-            break;
-        default:
-            printf("Opcao invalida! Tente novamente.\n");
+void geraRelatorioAcervo(Desc *desc, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        perror("Nao foi possivel criar o arquivo");
+        return;
     }
+
+    No *atual = desc->inicio;
+    fprintf(file, "Relatorio do Acervo Completo:\n\n");
+    while (atual != NULL) {
+        fprintf(file, "Titulo: %s\n", atual->dado.titulo);
+        fprintf(file, "Artista: %s\n", atual->dado.artista);
+        fprintf(file, "Letra: %s\n", atual->dado.letra);
+        fprintf(file, "Codigo: %d\n", atual->dado.codigo);
+        fprintf(file, "Execucoes: %d\n", atual->dado.execucoes);
+        fprintf(file, "------------------------------\n");
+        atual = atual->prox;
+    }
+
+    fclose(file);
+    printf("Relatorio do acervo gerado com sucesso em %s.\n", filename);
 }
 
 void exibirMenu() {
@@ -404,6 +384,208 @@ void exibirMenu() {
     printf("6. Back-up\n");
     printf("7. Sair\n");
     printf("Escolha uma opcao: ");
+}
+
+void geraRelatorio(Desc *desc, Fila *fila, Pilha *pilha) {
+    int opcao;
+    char filename[MAX_CHAR];
+
+    printf("\nGerar Relatorio:\n");
+    printf("1. Playlist aleatoria\n");
+    printf("2. Playlist pessoal\n");
+    printf("3. Acervo completo\n");
+    printf("Escolha uma opcao: ");
+    scanf("%d", &opcao);
+    getchar();
+
+    printf("Digite o nome do arquivo para salvar o relatorio: ");
+    fgets(filename, MAX_CHAR, stdin);
+    filename[strcspn(filename, "\n")] = '\0';
+
+    switch (opcao) {
+        case 1:
+            if (fila != NULL && fila->tam > 0) {
+                geraRelatorioPlaylist(fila, NULL, filename);
+            } else {
+                printf("Nenhuma playlist aleatoria foi criada.\n");
+            }
+            break;
+        case 2:
+            if (pilha != NULL && pilha->tam > 0) {
+                geraRelatorioPlaylist(NULL, pilha, filename);
+            } else {
+                printf("Nenhuma playlist pessoal foi criada.\n");
+            }
+            break;
+        case 3:
+            geraRelatorioAcervo(desc, filename);
+            break;
+        default:
+            printf("Opcao invalida! Tente novamente.\n");
+    }
+}
+
+void shuffle(No **array, int n) {
+    if (n > 1) {
+        srand(time(NULL)); // Inicializa o gerador de números aleatórios
+        for (int i = 0; i < n - 1; i++) {
+            int j = i + rand() / (RAND_MAX / (n - i) + 1);
+            No *temp = array[j];
+            array[j] = array[i];
+            array[i] = temp;
+        }
+    }
+}
+
+void playlistAleatoria(Desc *desc, Fila *fila, int n) {
+    if (n > desc->tam) {
+        printf("Numero de musicas solicitado (%d) maior que o total disponivel (%d). Criando playlist com todas as musicas disponiveis.\n", n, desc->tam);
+        n = desc->tam;
+    }
+
+    // Cria um array de ponteiros para os nós da lista
+    No **array = (No**)malloc(desc->tam * sizeof(No*));
+    No *atual = desc->inicio;
+    int i = 0;
+
+    // Preenche o array com ponteiros para os nós
+    while (atual != NULL) {
+        array[i++] = atual;
+        atual = atual->prox;
+    }
+
+    // Embaralha o array
+    shuffle(array, desc->tam);
+
+    // Adiciona as primeiras n músicas embaralhadas na fila
+    for (i = 0; i < n; i++) {
+        enfileira(fila, array[i]->dado);
+    }
+
+    free(array);
+    printf("Playlist aleatoria criada com %d musicas.\n", n);
+}
+
+void gerenciarPlaylist(Desc *desc, Fila **fila, Pilha **pilha) {
+    int opcaoPlaylist, numMusicas, i, execucoes;
+    No *musicaAtual;
+    Musica musica;
+    char titulo[MAX_CHAR];
+
+    printf("\nPlaylist:\n");
+    printf("1. Criar playlist aleatoria\n");
+    printf("2. Criar playlist pessoal\n");
+    printf("Escolha uma opcao: ");
+    scanf("%d", &opcaoPlaylist);
+    getchar();
+
+    switch (opcaoPlaylist) {
+        case 1:
+            printf("Quantas musicas deseja colocar na playlist aleatoria? ");
+            scanf("%d", &numMusicas);
+            getchar();
+
+            if (*fila != NULL) {
+                // Libere a memória alocada para a fila antiga
+                No *atual = (*fila)->inicio;
+                while (atual != NULL) {
+                    No *temp = atual;
+                    atual = atual->prox;
+                    free(temp);
+                }
+                free(*fila);
+            }
+            *fila = criaFila();
+
+            playlistAleatoria(desc, *fila, numMusicas); // Gera a playlist aleatória
+
+            break;
+
+        case 2:
+            printf("Quantas musicas deseja colocar na playlist pessoal? ");
+            scanf("%d", &numMusicas);
+            getchar();
+
+            if (*pilha != NULL) {
+                // Libere a memória alocada para a pilha antiga
+                No *atual = (*pilha)->topo;
+                while (atual != NULL) {
+                    No *temp = atual;
+                    atual = atual->prox;
+                    free(temp);
+                }
+                free(*pilha);
+            }
+            *pilha = criaPilha();
+
+            int contador = 0;
+            while (contador < numMusicas) {
+                printf("Digite o titulo da musica para adicionar a playlist (ou 'sair' para finalizar): ");
+                fgets(titulo, MAX_CHAR, stdin);
+                titulo[strcspn(titulo, "\n")] = '\0';
+
+                if (strcmp(titulo, "sair") == 0) {
+                    break;
+                }
+
+                musicaAtual = desc->inicio;
+                while (musicaAtual != NULL) {
+                    if (strcmp(musicaAtual->dado.titulo, titulo) == 0) {
+                        printf("Digite o numero de execucoes para a musica '%s': ", titulo);
+                        scanf("%d", &execucoes);
+                        getchar();
+
+                        musica = musicaAtual->dado;
+                        execucoes = execucoes; // Atualiza o número de execuções
+
+                        empilha(*pilha, musica);
+                        contador++;
+                        break;
+                    }
+                    musicaAtual = musicaAtual->prox;
+                }
+
+                if (musicaAtual == NULL) {
+                    printf("Musica '%s' nao encontrada.\n", titulo);
+                }
+            }
+
+            if (contador < numMusicas) {
+                printf("Menos musicas do que o solicitado. Adicionadas %d musicas.\n", contador);
+            } else {
+                printf("Playlist pessoal criada com %d musicas.\n", numMusicas);
+            }
+            break;
+
+        default:
+            printf("Opcao invalida! Tente novamente.\n");
+    }
+}
+
+void buscaOuImpressao(Desc *desc) {
+    int opcao;
+    char titulo[MAX_CHAR];
+
+    printf("\nImpressao:\n");
+    printf("1. Busca por Titulo\n");
+    printf("2. Imprimir todas as musicas\n");
+    printf("Escolha uma opcao: ");
+    scanf("%d", &opcao);
+    getchar();
+
+    switch (opcao) {
+        case 1:
+            printf("Digite o titulo da musica: ");
+            fgets(titulo, MAX_CHAR, stdin);
+            titulo[strcspn(titulo, "\n")] = '\0';
+            imprimeBuscaPorTituloOuTodas(desc, titulo);
+            break;
+        case 2:
+            imprimeBuscaPorTituloOuTodas(desc, NULL);
+            break;
+        default:
+            printf("Opcao invalida! Tente novamente.\n");
+    }
 }
 
 int main() {
@@ -452,29 +634,30 @@ int main() {
                 busca(desc);
                 break;
             case 4:
-                imprimeMusicas(desc);
+                buscaOuImpressao(desc);
                 break;
             case 5:
-                printf("Relatorio nao implementado.\n");
+                geraRelatorio(desc, fila, pilha);
                 break;
             case 6:
-                printf("Back-up nao implementado.\n");
+                // Implementar função de back-up se necessário
+                printf("Funcao de back-up nao implementada.\n");
                 break;
             case 7:
-                printf("Saindo...\n");
+                printf("Saindo do programa...\n");
                 break;
             default:
                 printf("Opcao invalida! Tente novamente.\n");
         }
     } while (opcao != 7);
 
-    No *atual = desc->inicio;
-    while (atual != NULL) {
-        No *temp = atual;
-        atual = atual->prox;
-        free(temp);
+    // Libera memória das playlists se ainda existirem
+    if (fila != NULL) {
+        free(fila);
     }
-    free(desc);
+    if (pilha != NULL) {
+        free(pilha);
+    }
 
     return 0;
 }

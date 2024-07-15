@@ -3,6 +3,8 @@
         "bibliotecas.h": "c",
         "stdio.h": "c",
         "stdlib.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "pilha.h": "c",
+        "musica.h": "c"
     }
 }
